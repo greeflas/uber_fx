@@ -26,18 +26,10 @@ func main() {
 			NewHTTPServer,
 			fx.Annotate(
 				NewServerMux,
-				fx.ParamTags(`name:"echo"`, `name:"hello"`),
+				fx.ParamTags(`group:"routes"`),
 			),
-			fx.Annotate(
-				NewEchoHandler,
-				fx.As(new(Route)),
-				fx.ResultTags(`name:"echo"`),
-			),
-			fx.Annotate(
-				NewHelloHandler,
-				fx.As(new(Route)),
-				fx.ResultTags(`name:"hello"`),
-			),
+			AsRoute(NewEchoHandler),
+			AsRoute(NewHelloHandler),
 			zap.NewExample,
 		),
 		fx.Invoke(func(server *http.Server) {}),
@@ -45,6 +37,14 @@ func main() {
 			return &fxevent.ZapLogger{Logger: log}
 		}),
 	).Run()
+}
+
+func AsRoute(r any) any {
+	return fx.Annotate(
+		r,
+		fx.As(new(Route)),
+		fx.ResultTags(`group:"routes"`),
+	)
 }
 
 func NewHTTPServer(lc fx.Lifecycle, mux *http.ServeMux, log *zap.Logger) *http.Server {
@@ -70,10 +70,11 @@ func NewHTTPServer(lc fx.Lifecycle, mux *http.ServeMux, log *zap.Logger) *http.S
 	return srv
 }
 
-func NewServerMux(route1, route2 Route) *http.ServeMux {
+func NewServerMux(routes []Route) *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.Handle(route1.Pattern(), route1)
-	mux.Handle(route2.Pattern(), route2)
+	for _, route := range routes {
+		mux.Handle(route.Pattern(), route)
+	}
 
 	return mux
 }
