@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
+	"go.uber.org/zap"
 	"io"
 	"net"
 	"net/http"
-	"os"
 )
 
 func main() {
@@ -16,12 +16,16 @@ func main() {
 			NewHTTPServer,
 			NewServerMux,
 			NewEchoHandler,
+			zap.NewExample,
 		),
 		fx.Invoke(func(server *http.Server) {}),
+		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
+			return &fxevent.ZapLogger{Logger: log}
+		}),
 	).Run()
 }
 
-func NewHTTPServer(lc fx.Lifecycle, mux *http.ServeMux) *http.Server {
+func NewHTTPServer(lc fx.Lifecycle, mux *http.ServeMux, log *zap.Logger) *http.Server {
 	srv := &http.Server{Addr: ":8080", Handler: mux}
 
 	lc.Append(fx.Hook{
@@ -31,7 +35,7 @@ func NewHTTPServer(lc fx.Lifecycle, mux *http.ServeMux) *http.Server {
 				return err
 			}
 
-			fmt.Println("Starting HTTP server at", srv.Addr)
+			log.Info("Starting HTTP server", zap.String("addr", srv.Addr))
 			go srv.Serve(ln)
 
 			return nil
@@ -44,15 +48,17 @@ func NewHTTPServer(lc fx.Lifecycle, mux *http.ServeMux) *http.Server {
 	return srv
 }
 
-type EchoHandler struct{}
-
-func NewEchoHandler() *EchoHandler {
-	return new(EchoHandler)
+type EchoHandler struct {
+	log *zap.Logger
 }
 
-func (*EchoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func NewEchoHandler(log *zap.Logger) *EchoHandler {
+	return &EchoHandler{log: log}
+}
+
+func (h *EchoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if _, err := io.Copy(w, r.Body); err != nil {
-		fmt.Fprintln(os.Stderr, "Failed to handle request:", err)
+		h.log.Warn("Failed to handle request", zap.Error(err))
 	}
 }
 
