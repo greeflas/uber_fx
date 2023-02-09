@@ -10,12 +10,24 @@ import (
 	"net/http"
 )
 
+// Route is a http.Handler that knows the mux pattern
+// under which it will be registered.
+type Route interface {
+	http.Handler
+
+	// Pattern reports the path at which this is registered.
+	Pattern() string
+}
+
 func main() {
 	fx.New(
 		fx.Provide(
 			NewHTTPServer,
 			NewServerMux,
-			NewEchoHandler,
+			fx.Annotate(
+				NewEchoHandler,
+				fx.As(new(Route)),
+			),
 			zap.NewExample,
 		),
 		fx.Invoke(func(server *http.Server) {}),
@@ -48,6 +60,13 @@ func NewHTTPServer(lc fx.Lifecycle, mux *http.ServeMux, log *zap.Logger) *http.S
 	return srv
 }
 
+func NewServerMux(route Route) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.Handle(route.Pattern(), route)
+
+	return mux
+}
+
 type EchoHandler struct {
 	log *zap.Logger
 }
@@ -62,9 +81,6 @@ func (h *EchoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func NewServerMux(echo *EchoHandler) *http.ServeMux {
-	mux := http.NewServeMux()
-	mux.Handle("/echo", echo)
-
-	return mux
+func (*EchoHandler) Pattern() string {
+	return "/echo"
 }
