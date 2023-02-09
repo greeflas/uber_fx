@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
@@ -23,10 +24,19 @@ func main() {
 	fx.New(
 		fx.Provide(
 			NewHTTPServer,
-			NewServerMux,
+			fx.Annotate(
+				NewServerMux,
+				fx.ParamTags(`name:"echo"`, `name:"hello"`),
+			),
 			fx.Annotate(
 				NewEchoHandler,
 				fx.As(new(Route)),
+				fx.ResultTags(`name:"echo"`),
+			),
+			fx.Annotate(
+				NewHelloHandler,
+				fx.As(new(Route)),
+				fx.ResultTags(`name:"hello"`),
 			),
 			zap.NewExample,
 		),
@@ -60,9 +70,10 @@ func NewHTTPServer(lc fx.Lifecycle, mux *http.ServeMux, log *zap.Logger) *http.S
 	return srv
 }
 
-func NewServerMux(route Route) *http.ServeMux {
+func NewServerMux(route1, route2 Route) *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.Handle(route.Pattern(), route)
+	mux.Handle(route1.Pattern(), route1)
+	mux.Handle(route2.Pattern(), route2)
 
 	return mux
 }
@@ -83,4 +94,33 @@ func (h *EchoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (*EchoHandler) Pattern() string {
 	return "/echo"
+}
+
+type HelloHandler struct {
+	log *zap.Logger
+}
+
+func NewHelloHandler(log *zap.Logger) *HelloHandler {
+	return &HelloHandler{log: log}
+}
+
+func (h *HelloHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.log.Error("Failed to read request", zap.Error(err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
+		return
+	}
+
+	if _, err := fmt.Fprintf(w, "Hello, %s\n", body); err != nil {
+		h.log.Error("Failed to write response", zap.Error(err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
+		return
+	}
+}
+
+func (*HelloHandler) Pattern() string {
+	return "/hello"
 }
