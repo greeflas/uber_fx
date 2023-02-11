@@ -9,6 +9,10 @@ import (
 )
 
 func Run() {
+	fx.New(getAllOptions()...).Run()
+}
+
+func getAllOptions() []fx.Option {
 	dependencies := getDependencies()
 
 	options := append(dependencies, []fx.Option{
@@ -17,7 +21,7 @@ func Run() {
 		}),
 	}...)
 
-	fx.New(options...).Run()
+	return options
 }
 
 func getDependencies() []fx.Option {
