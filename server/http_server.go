@@ -14,14 +14,22 @@ type HTTPServer struct {
 	log      *zap.Logger
 }
 
-func NewHTTPServer(listener net.Listener, mux *http.ServeMux, log *zap.Logger) *HTTPServer {
+func NewHTTPServer(p HTTPServerParams) *HTTPServer {
 	return &HTTPServer{
 		srv: &http.Server{
-			Handler: mux,
+			Handler: p.Mux,
 		},
-		listener: listener,
-		log:      log,
+		listener: p.Listener,
+		log:      p.Log,
 	}
+}
+
+type HTTPServerParams struct {
+	fx.In
+
+	Listener net.Listener
+	Mux      *http.ServeMux
+	Log      *zap.Logger
 }
 
 func (s *HTTPServer) Start() error {
