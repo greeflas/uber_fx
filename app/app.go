@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/greeflas/uber_fx/handler"
 	"github.com/greeflas/uber_fx/server"
+	"github.com/greeflas/uber_fx/service"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
@@ -27,7 +28,11 @@ func getAllOptions() []fx.Option {
 func getDependencies() []fx.Option {
 	return []fx.Option{
 		fx.Provide(zap.NewExample),
+		fx.Decorate(func(hello service.Hello) service.Hello {
+			return service.NewHelloJSONDecorator(hello)
+		}),
 		server.Module,
 		handler.Module,
+		service.Module,
 	}
 }
