@@ -1,5 +1,7 @@
 # Uber Fx Demo
 
+[logrus branch](https://github.com/greeflas/uber_fx/tree/logrus) - with [Logrus](https://github.com/sirupsen/logrus) as main logger.
+
 ## Useful links
 
 1. https://uber-go.github.io/fx/
