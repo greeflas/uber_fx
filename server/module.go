@@ -1,8 +1,9 @@
 package server
 
 import (
-	"go.uber.org/fx"
 	"net"
+
+	"go.uber.org/fx"
 )
 
 var Module = fx.Module("server",

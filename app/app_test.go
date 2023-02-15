@@ -1,8 +1,9 @@
 package app
 
 import (
-	"go.uber.org/fx"
 	"testing"
+
+	"go.uber.org/fx"
 )
 
 func TestGetAllOptions(t *testing.T) {

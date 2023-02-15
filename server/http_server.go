@@ -2,16 +2,17 @@ package server
 
 import (
 	"context"
-	"go.uber.org/fx"
-	"go.uber.org/zap"
 	"net"
 	"net/http"
+
+	"github.com/sirupsen/logrus"
+	"go.uber.org/fx"
 )
 
 type HTTPServer struct {
 	srv      *http.Server
 	listener net.Listener
-	log      *zap.Logger
+	log      *logrus.Logger
 }
 
 func NewHTTPServer(p HTTPServerParams) *HTTPServer {
@@ -29,13 +30,13 @@ type HTTPServerParams struct {
 
 	Listener net.Listener
 	Mux      *http.ServeMux
-	Log      *zap.Logger
+	Log      *logrus.Logger
 }
 
 func (s *HTTPServer) Start() error {
 	go func() {
 		if err := s.srv.Serve(s.listener); err != nil && err != http.ErrServerClosed {
-			s.log.Error("Failed to serve listener", zap.Error(err))
+			s.log.Errorf("Failed to serve listener: %v", err)
 		}
 	}()
 
@@ -46,10 +47,10 @@ func (s *HTTPServer) Shutdown(ctx context.Context) error {
 	return s.srv.Shutdown(ctx)
 }
 
-func Run(lc fx.Lifecycle, log *zap.Logger, srv *HTTPServer) {
+func Run(lc fx.Lifecycle, log *logrus.Logger, srv *HTTPServer) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			log.Info("Starting HTTP server", zap.String("addr", srv.listener.Addr().String()))
+			log.WithFields(logrus.Fields{"addr": srv.listener.Addr().String()}).Info("Starting HTTP server")
 
 			return srv.Start()
 		},
